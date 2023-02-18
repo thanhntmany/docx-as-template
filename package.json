@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/thanhntmany/docx-as-template/issues"
   },
-  "homepage": "https://github.com/thanhntmany/docx-as-template#readme"
+  "homepage": "https://github.com/thanhntmany/docx-as-template#readme",
+  "dependencies": {
+    "adm-zip": "^0.5.10"
+  }
 }

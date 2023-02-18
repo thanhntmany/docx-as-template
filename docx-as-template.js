@@ -47,7 +47,11 @@ const ZIPHandler_proto = ZIPHandler.prototype;
 // #TODO:
 ZIPHandler_proto.zip = function (outputPath, inputPath) { };
 // #TODO:
-ZIPHandler_proto.unzip = function (outputPath, inputPath) { };
+ZIPHandler_proto.unzip = function (outputDir, inputPath) {
+    console.log("  --> ZIPHandler_proto.unzip");
+    console.log("outputDir:", outputDir);
+    console.log("inputPath:", inputPath);
+};
 
 
 /**
@@ -104,7 +108,8 @@ function Template(rawFilePath, templateDir) {
     if (templateDir === undefined) {
         templateDir = rawFilePath + "--tmp";
         fs.mkdirSync(templateDir, { recursive: true });
-        TmpDirCleaner.add(templateDir);
+        // #TODO: uncomment below at production.
+        // TmpDirCleaner.add(templateDir);
     };
 
     this.rawFilePath = rawFilePath;
@@ -116,8 +121,6 @@ function Template(rawFilePath, templateDir) {
     );
 
     this.zipHandler.unzip(this.fsHandler.baseDir, this.rawFilePath);
-
-    //#TODO: Clean at the end of process
 };
 const Template_proto = Template.prototype;
 
@@ -159,7 +162,6 @@ function App() {
 const App_proto = App.prototype;
 
 App_proto._loadTemplate = function (templatePath) {
-    console.log("_loadTemplate", templatePath);
     return new Template(templatePath);
 };
 
