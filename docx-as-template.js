@@ -8,7 +8,7 @@
 // const process = require('process');
 const fs = require('fs');
 const path = require('path');
-
+const AdmZip = require("adm-zip");
 
 /**
  * Temporary files Cleaner
@@ -47,10 +47,13 @@ const ZIPHandler_proto = ZIPHandler.prototype;
 // #TODO:
 ZIPHandler_proto.zip = function (outputPath, inputPath) { };
 // #TODO:
-ZIPHandler_proto.unzip = function (outputDir, inputPath) {
+ZIPHandler_proto.unzip = function (inputPath, outputDir) {
     console.log("  --> ZIPHandler_proto.unzip");
     console.log("outputDir:", outputDir);
     console.log("inputPath:", inputPath);
+
+    var zip = new AdmZip(inputPath);
+    zip.extractAllTo(outputDir, true);
 };
 
 
@@ -120,7 +123,10 @@ function Template(rawFilePath, templateDir) {
         path.join(this.templateDir, "backup"),
     );
 
-    this.zipHandler.unzip(this.fsHandler.baseDir, this.rawFilePath);
+    var zipFormPath = path.join(this.templateDir, "template.zip");
+    fs.copyFileSync(rawFilePath, zipFormPath);
+
+    this.zipHandler.unzip(zipFormPath, this.fsHandler.baseDir);
 };
 const Template_proto = Template.prototype;
 
