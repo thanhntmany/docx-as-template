@@ -200,14 +200,33 @@ Template_proto.patch = function (data) {
     listPlaceholder.filter(function (placeholder, index, array) {
         var key = placeholder.slice(1, -1);
         if (!data.hasOwnProperty(key)) {
-            console.warn(`Missing ${key} in data`);
+            console.warn(`Missing data for: ${key}`);
             return true;
         };
 
         var fillString = String(data[key]);
-        content = content.replaceAll(placeholder, fillString)
+        var reg = new RegExp(placeholder, "g");
+        content = content.replace(reg, fillString)
 
         return false;
+    }, this);
+
+    // Scan any suspect remnant
+    var suspectPlaceholder = content.replace(/{[-\w]*}/g, '').match(/{[^}]+}/g);
+    suspectPlaceholder.filter(function (suspectString, index, array) {
+
+        var cleanedString = suspectString.replace(/<{1}[^>]*>/g, '').replace(/[\W\n]*/g, '');
+
+        if (data.hasOwnProperty(cleanedString)) {
+            var fillString = String(data[cleanedString]);
+            content = content.replace(suspectString, fillString);
+
+            return false;
+        };
+
+        console.info(`Maybe missing data for: ${cleanedString}`);
+
+        return true;
     }, this);
 
     FileIOHandler.write(mainDocumentPartPath, content);
