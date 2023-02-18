@@ -44,13 +44,17 @@ process.on('exit', (code) => {
 const ZIPHandler = {
     zip: function (inputDir, outputPath) {
         // #TODO: Test to make sure work properly
+        outputPath = path.resolve(outputPath);
         var zip = new AdmZip();
         zip.addLocalFolder(inputDir);
         zip.writeZip(outputPath);
+        return outputPath;
     },
     unzip: function (inputPath, outputDir) {
+        outputDir = path.resolve(outputDir);
         var zip = new AdmZip(inputPath);
         zip.extractAllTo(outputDir, true);
+        return outputDir;
     }
 };
 
@@ -61,6 +65,9 @@ const ZIPHandler = {
 const FileIOHandler = {
     load: function (path) {
         return fs.readFileSync(path, 'utf8');
+    },
+    loadToJsObject: function (path) {
+        return JSON.parse(this.load(path))
     },
     write: function (path) {
         fs.writeFileSync(path);
@@ -119,12 +126,10 @@ TemplateFSHandler_proto.recoverFile = function (filePath) {
 
 };
 
-
 // #TODO:
 TemplateFSHandler_proto.recover = function (path) {
 
 };
-
 
 /**
  * Template
@@ -171,7 +176,7 @@ Template_proto.patch = function (data) {
 };
 
 Template_proto.compile = function (outputPath) {
-    return ZIPHandler.zip(outputPath, this.templateDir);
+    return ZIPHandler.zip(this.fsHandler.baseDir, outputPath);
 };
 
 Template_proto.render = function (outputPath, data) {
@@ -181,27 +186,62 @@ Template_proto.render = function (outputPath, data) {
 };
 
 /**
+ * Template Cache
+ */
+const TemplateStore = {
+    _cache: {},
+    _loadTemplate: function (templatePath) {
+        return new Template(templatePath);
+    },
+    getTemplate: function (templatePath) {
+        templatePath = path.resolve(templatePath);
+
+        return templatePath in this._cache
+            ? this._cache[templatePath]
+            : this._cache[templatePath] = this._loadTemplate(templatePath)
+    }
+};
+
+/**
  * Core App.
  */
 function App() {
-    this._templateCache = {};
+    this.state = {
+        templatePath: null,
+        dataPath: null,
+        data: null
+    }
 };
 const App_proto = App.prototype;
 
-App_proto._loadTemplate = function (templatePath) {
-    return new Template(templatePath);
+App_proto.setTemplate = function (templatePath) {
+    this.state.templatePath = templatePath;
+    return this;
 };
 
-App_proto.loadTemplate = function (templatePath) {
-    templatePath = path.resolve(templatePath);
+App_proto.setData = function (data) {
+    if (typeof data === 'string' || data instanceof String) {
+        this.state.dataPath = path.resolve(data);
+        data = FileIOHandler.loadToJsObject(data)
+    }
+    else this.state.dataPath = null;
 
-    return templatePath in this._templateCache
-        ? this._templateCache[templatePath]
-        : this._templateCache[templatePath] = this._loadTemplate(templatePath)
+    this.state.data = data;
+    return this;
 };
 
 App_proto.render = function (outputPath, data, templatePath) {
-    return this.loadTemplate(templatePath).render(outputPath, data);
+    if (templatePath) this.setTemplate(templatePath);
+    if (data) this.setData(data);
+
+    if (!outputPath) outputPath = path.join(
+        path.dirname(this.state.dataPath),
+        path.basename(this.state.dataPath, ".json") + "__rendered__" + path.basename(this.state.templatePath, ".docx")
+    );
+
+    return TemplateStore
+        .getTemplate(this.state.templatePath)
+        .render(outputPath, this.state.data);
 };
 
 
@@ -215,6 +255,7 @@ function createApp() {
 exports = module.exports = createApp;
 exports.App = App;
 exports.Template = Template;
+exports.TemplateStore = TemplateStore;
 
 
 /**
