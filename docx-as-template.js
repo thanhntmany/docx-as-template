@@ -41,19 +41,43 @@ process.on('exit', (code) => {
 /**
  * Zip handler
  */
-function ZIPHandler() { };
-const ZIPHandler_proto = ZIPHandler.prototype;
-
-ZIPHandler_proto.zip = function (inputDir, outputPath) {
-    // #TODO: Test to make sure work properly
-    var zip = new AdmZip();
-    zip.addLocalFolder(inputDir);
-    zip.writeZip(outputPath);
+const ZIPHandler = {
+    zip: function (inputDir, outputPath) {
+        // #TODO: Test to make sure work properly
+        var zip = new AdmZip();
+        zip.addLocalFolder(inputDir);
+        zip.writeZip(outputPath);
+    },
+    unzip: function (inputPath, outputDir) {
+        var zip = new AdmZip(inputPath);
+        zip.extractAllTo(outputDir, true);
+    }
 };
 
-ZIPHandler_proto.unzip = function (inputPath, outputDir) {
-    var zip = new AdmZip(inputPath);
-    zip.extractAllTo(outputDir, true);
+/**
+ * FileIO handler
+ */
+// #TODO:
+const FileIOHandler = {
+    load: function (path) {
+        return fs.readFileSync(path, 'utf8');
+    },
+    write: function (path) {
+        fs.writeFileSync(path);
+    }
+};
+
+/**
+ * XML handler
+ */
+// #TODO:
+const XMLHandler = {
+    toJSObject: function () {
+
+    },
+    fromJSObject: function () {
+
+    }
 };
 
 /**
@@ -125,11 +149,9 @@ function Template(rawFilePath, templateDir) {
     var zipFormPath = path.join(this.templateDir, "template.zip");
     fs.copyFileSync(rawFilePath, zipFormPath);
 
-    this.zipHandler.unzip(zipFormPath, this.fsHandler.baseDir);
+    ZIPHandler.unzip(zipFormPath, this.fsHandler.baseDir);
 };
 const Template_proto = Template.prototype;
-
-Template_proto.zipHandler = new ZIPHandler();
 
 Template_proto.refresh = function () {
     this.fsHandler.recover();
@@ -149,7 +171,7 @@ Template_proto.patch = function (data) {
 };
 
 Template_proto.compile = function (outputPath) {
-    return this.zipHandler.zip(outputPath, this.templateDir);
+    return ZIPHandler.zip(outputPath, this.templateDir);
 };
 
 Template_proto.render = function (outputPath, data) {
