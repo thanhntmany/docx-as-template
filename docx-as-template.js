@@ -44,18 +44,17 @@ process.on('exit', (code) => {
 function ZIPHandler() { };
 const ZIPHandler_proto = ZIPHandler.prototype;
 
-// #TODO:
-ZIPHandler_proto.zip = function (outputPath, inputPath) { };
-// #TODO:
-ZIPHandler_proto.unzip = function (inputPath, outputDir) {
-    console.log("  --> ZIPHandler_proto.unzip");
-    console.log("outputDir:", outputDir);
-    console.log("inputPath:", inputPath);
+ZIPHandler_proto.zip = function (inputDir, outputPath) {
+    // #TODO: Test to make sure work properly
+    var zip = new AdmZip();
+    zip.addLocalFolder(inputDir);
+    zip.writeZip(outputPath);
+};
 
+ZIPHandler_proto.unzip = function (inputPath, outputDir) {
     var zip = new AdmZip(inputPath);
     zip.extractAllTo(outputDir, true);
 };
-
 
 /**
  * File system helper
