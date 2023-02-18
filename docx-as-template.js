@@ -53,19 +53,47 @@ ZIPHandler_proto.unzip = function (outputPath, inputPath) { };
 /**
  * File system helper
  */
-function TemplateFSHandler(basePath, backupPath) {
-    this.basePath = basePath;
-    this.backupPath = backupPath;
+function TemplateFSHandler(baseDir, backupDir) {
+    this.baseDir = baseDir;
+    this.backupDir = backupDir;
 
-    fs.mkdirSync(this.basePath, { recursive: true });
-    fs.mkdirSync(this.backupPath, { recursive: true });
+    fs.mkdirSync(this.baseDir, { recursive: true });
+    fs.mkdirSync(this.backupDir, { recursive: true });
 };
 const TemplateFSHandler_proto = TemplateFSHandler.prototype;
 
+TemplateFSHandler_proto.getCorrespondingBackupPath = function (path) {
+    var relRath = path.relative(this.baseDir, path);
+    if (relRath.startsWith(".") && relRath.startsWith("..")) return path.join(this.backupDir, relRath);
+};
+
+TemplateFSHandler_proto.backupFileIfNeed = function (filePath) {
+    var fileBackupPath = this.getCorrespondingBackupPath(filePath);
+
+    // #TODO: add try catch if needed
+    fs.mkdirSync(
+        path.dirname(fileBackupPath),
+        { recursive: true }
+    );
+
+    fs.copyFileSync(
+        filePath,
+        fileBackupPath,
+        fs.constants.COPYFILE_EXCL
+    );
+
+};
+
 // #TODO:
-TemplateFSHandler_proto.backup = function (path) { };
+TemplateFSHandler_proto.recoverFile = function (filePath) {
+
+};
+
+
 // #TODO:
-TemplateFSHandler_proto.recover = function (path) { };
+TemplateFSHandler_proto.recover = function (path) {
+
+};
 
 
 /**
@@ -87,7 +115,7 @@ function Template(rawFilePath, templateDir) {
         path.join(this.templateDir, "backup"),
     );
 
-    this.zipHandler.unzip(this.fsHandler.basePath, this.rawFilePath);
+    this.zipHandler.unzip(this.fsHandler.baseDir, this.rawFilePath);
 
     //#TODO: Clean at the end of process
 };
@@ -100,9 +128,16 @@ Template_proto.refresh = function () {
 };
 
 // #TODO:
+Template_proto.patchFile = function (filePath, patcherFn) {
+    this.fsHandler.backupFileIfNeed(filePath);
+    // #TODO:
+    // this.fsHandler.backupDir( <changed-file-path> )
+};
+
+// #TODO:
 Template_proto.patch = function (data) {
     // #TODO:
-    // this.fsHandler.backupPath( <changed-file-path> )
+    // this.fsHandler.backupDir( <changed-file-path> )
 };
 
 Template_proto.compile = function (outputPath) {
