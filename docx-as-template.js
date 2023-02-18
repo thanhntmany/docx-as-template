@@ -5,8 +5,37 @@
 
 'use strict';
 
-const process = require('process');
+// const process = require('process');
+const fs = require('fs');
 const path = require('path');
+
+
+/**
+ * Temporary files Cleaner
+ */
+const TmpDirCleaner = {
+    queue: []
+};
+
+TmpDirCleaner.add = function (path) {
+    this.queue.push(path);
+    return this;
+};
+
+TmpDirCleaner.clean = function () {
+    var curPath;
+    const rm_options = {
+        force: true,
+        recursive: true,
+    };
+    while ((curPath = this.queue.shift()) !== undefined) {
+        fs.rmdirSync(curPath, rm_options);
+    };
+};
+
+process.on('exit', (code) => {
+    TmpDirCleaner.clean();
+});
 
 
 /**
@@ -27,6 +56,9 @@ ZIPHandler_proto.unzip = function (outputPath, inputPath) { };
 function TemplateFSHandler(basePath, backupPath) {
     this.basePath = basePath;
     this.backupPath = backupPath;
+
+    fs.mkdirSync(this.basePath, { recursive: true });
+    fs.mkdirSync(this.backupPath, { recursive: true });
 };
 const TemplateFSHandler_proto = TemplateFSHandler.prototype;
 
@@ -40,6 +72,16 @@ TemplateFSHandler_proto.recover = function (path) { };
  * Template
  */
 function Template(rawFilePath, templateDir) {
+    rawFilePath = path.resolve(rawFilePath);
+    if (templateDir === undefined) {
+        templateDir = path.join(
+            path.dirname(rawFilePath),
+            path.basename(rawFilePath, ".docx") + "--tmp"
+        );
+        fs.mkdirSync(templateDir, { recursive: true });
+        TmpDirCleaner.add(templateDir);
+    };
+
     this.rawFilePath = rawFilePath;
     this.templateDir = templateDir;
 
@@ -54,7 +96,7 @@ function Template(rawFilePath, templateDir) {
 };
 const Template_proto = Template.prototype;
 
-App_proto.zipHandler = new ZIPHandler();
+Template_proto.zipHandler = new ZIPHandler();
 
 Template_proto.refresh = function () {
     this.fsHandler.recover();
@@ -85,7 +127,8 @@ function App() {
 const App_proto = App.prototype;
 
 App_proto._loadTemplate = function (templatePath) {
-
+    console.log("_loadTemplate", templatePath);
+    return new Template(templatePath);
 };
 
 App_proto.loadTemplate = function (templatePath) {
@@ -105,11 +148,12 @@ App_proto.render = function (outputPath, data, templatePath) {
  * Expose `createApp()` + Core classes
  */
 function createApp() {
-    return new DASApp();
+    return new exports.App();
 };
 
 exports = module.exports = createApp;
 exports.App = App;
+exports.Template = Template;
 
 
 /**
