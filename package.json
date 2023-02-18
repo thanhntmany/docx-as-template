@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/thanhntmany/docx-as-template#readme",
   "dependencies": {
-    "adm-zip": "^0.5.10"
+    "adm-zip": "^0.5.10",
+    "xml-js": "^1.6.11"
   }
 }
