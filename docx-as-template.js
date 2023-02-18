@@ -349,16 +349,13 @@ exports.App = App;
 exports.Template = Template;
 exports.TemplateStore = TemplateStore;
 
-
 /**
  * Run module as an independent application.
  */
 if (require.main === module) {
     const app = createApp();
 
-    var cmdRunner = app.cmd(args);
-    cmdRunner.exec();
-
-    //#TODO: run from param...
-    console.dir(cmdRunner, { depth: null })
+    var args = process.argv.slice(2)
+    if (args[0] == "--") args[0] = null;
+    app.render.apply(app, args);
 };
