@@ -44,7 +44,6 @@ process.on('exit', (code) => {
  */
 const ZIPHandler = {
     zip: function (inputDir, outputPath) {
-        // #TODO: Test to make sure work properly
         outputPath = path.resolve(outputPath);
         var zip = new AdmZip();
         zip.addLocalFolder(inputDir);
@@ -62,7 +61,6 @@ const ZIPHandler = {
 /**
  * XML handler
  */
-// #TODO:
 const XMLHandler = {
     toJsObject: function (xml, options) {
         return XmlJs.xml2js(xml, options)
@@ -75,7 +73,6 @@ const XMLHandler = {
 /**
  * FileIO handler
  */
-// #TODO:
 const FileIOHandler = {
     load: function (filePath) {
         return fs.readFileSync(filePath, 'utf8');
@@ -91,6 +88,22 @@ const FileIOHandler = {
     }
 };
 
+function treeDir(dirPath) {
+    var out = [];
+
+    var ls = fs.readdirSync(dirPath, { withFileTypes: true });
+    var curPath, _join = path.join;
+    ls.forEach(dirent => {
+        curPath = _join(dirPath, dirent.name)
+        if (dirent.isDirectory()) {
+            out = out.concat(treeDir(curPath))
+        }
+        else out.push(curPath);
+    });
+
+    return out;
+};
+
 /**
  * File system helper
  */
@@ -104,14 +117,28 @@ function TemplateFSHandler(baseDir, backupDir) {
 const TemplateFSHandler_proto = TemplateFSHandler.prototype;
 
 TemplateFSHandler_proto.getCorrespondingBackupPath = function (filePath) {
-    var relRath = path.relative(this.baseDir, filePath);
-    if (!relRath.startsWith(".")) return path.join(this.backupDir, relRath);
+    filePath = path.resolve(filePath);
+    if (filePath.startsWith(this.baseDir)) {
+        return path.join(
+            this.backupDir,
+            path.relative(this.baseDir, filePath)
+        );
+    };
+};
+
+TemplateFSHandler_proto.getCorrespondingBasePath = function (filePath) {
+    filePath = path.resolve(filePath);
+    if (filePath.startsWith(this.backupDir)) {
+        return path.join(
+            this.baseDir,
+            path.relative(this.backupDir, filePath)
+        );
+    };
 };
 
 TemplateFSHandler_proto.backupFileIfNeed = function (filePath) {
     var fileBackupPath = this.getCorrespondingBackupPath(filePath);
 
-    // #TODO: add try catch if needed
     fs.mkdirSync(
         path.dirname(fileBackupPath),
         { recursive: true }
@@ -125,18 +152,28 @@ TemplateFSHandler_proto.backupFileIfNeed = function (filePath) {
         );
     } catch (error) {
         if (error.code === 'EEXIST') return;
+        throw error;
     }
 
 };
 
-// #TODO:
 TemplateFSHandler_proto.recoverFile = function (filePath) {
+    var fileBasePath = this.getCorrespondingBasePath(filePath);
+    if (!fileBasePath) return;
 
+    fs.mkdirSync(
+        path.dirname(fileBasePath),
+        { recursive: true }
+    );
+
+    fs.copyFileSync(
+        filePath,
+        fileBasePath
+    );
 };
 
-// #TODO:
-TemplateFSHandler_proto.recover = function (filePath) {
-
+TemplateFSHandler_proto.recover = function () {
+    treeDir(this.backupDir).forEach(this.recoverFile, this);
 };
 
 /**
@@ -148,7 +185,7 @@ function Template(rawFilePath, templateDir) {
         templateDir = rawFilePath + "--tmp";
         fs.mkdirSync(templateDir, { recursive: true });
         // #TODO: uncomment below at production.
-        // TmpDirCleaner.add(templateDir);
+        TmpDirCleaner.add(templateDir);
     };
 
     this.rawFilePath = rawFilePath;
@@ -170,14 +207,10 @@ Template_proto.refresh = function () {
     this.fsHandler.recover();
 };
 
-// #TODO:
 Template_proto.patchFile = function (filePath, patcherFn) {
     this.fsHandler.backupFileIfNeed(filePath);
-    // #TODO:
-    // this.fsHandler.backupDir( <changed-file-path> )
 };
 
-// #TODO:
 Template_proto.patch = function (data) {
     var mediaTypesStream = FileIOHandler.loadXMLToJsObject(path.join(
         this.fsHandler.baseDir, "[Content_Types].xml"));
