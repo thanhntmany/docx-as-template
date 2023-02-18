@@ -209,7 +209,8 @@ function App() {
     this.state = {
         templatePath: null,
         dataPath: null,
-        data: null
+        data: null,
+        ouputDelimiter: "--"
     }
 };
 const App_proto = App.prototype;
@@ -236,7 +237,7 @@ App_proto.render = function (outputPath, data, templatePath) {
 
     if (!outputPath) outputPath = path.join(
         path.dirname(this.state.dataPath),
-        path.basename(this.state.dataPath, ".json") + "__rendered__" + path.basename(this.state.templatePath, ".docx")
+        path.basename(this.state.dataPath, ".json") + this.state.ouputDelimiter + path.basename(this.state.templatePath, ".docx") + ".docx"
     );
 
     return TemplateStore
