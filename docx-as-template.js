@@ -74,10 +74,7 @@ TemplateFSHandler_proto.recover = function (path) { };
 function Template(rawFilePath, templateDir) {
     rawFilePath = path.resolve(rawFilePath);
     if (templateDir === undefined) {
-        templateDir = path.join(
-            path.dirname(rawFilePath),
-            path.basename(rawFilePath, ".docx") + "--tmp"
-        );
+        templateDir = rawFilePath + "--tmp";
         fs.mkdirSync(templateDir, { recursive: true });
         TmpDirCleaner.add(templateDir);
     };
