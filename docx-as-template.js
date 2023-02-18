@@ -9,6 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require("adm-zip");
+const XmlJs = require('xml-js');
 
 /**
  * Temporary files Cleaner
@@ -59,6 +60,19 @@ const ZIPHandler = {
 };
 
 /**
+ * XML handler
+ */
+// #TODO:
+const XMLHandler = {
+    toJsObject: function (xml, options) {
+        return XmlJs.xml2js(xml, options)
+    },
+    fromJsObject: function (jsObject, options) {
+        return XmlJs.json2xml(jsObject, options);
+    }
+};
+
+/**
  * FileIO handler
  */
 // #TODO:
@@ -66,24 +80,14 @@ const FileIOHandler = {
     load: function (path) {
         return fs.readFileSync(path, 'utf8');
     },
-    loadToJsObject: function (path) {
+    loadJSONToJsObject: function (path) {
         return JSON.parse(this.load(path))
+    },
+    loadXMLToJsObject: function (path) {
+        return XMLHandler.toJsObject(this.load(path))
     },
     write: function (path) {
         fs.writeFileSync(path);
-    }
-};
-
-/**
- * XML handler
- */
-// #TODO:
-const XMLHandler = {
-    toJSObject: function () {
-
-    },
-    fromJSObject: function () {
-
     }
 };
 
@@ -99,9 +103,9 @@ function TemplateFSHandler(baseDir, backupDir) {
 };
 const TemplateFSHandler_proto = TemplateFSHandler.prototype;
 
-TemplateFSHandler_proto.getCorrespondingBackupPath = function (path) {
-    var relRath = path.relative(this.baseDir, path);
-    if (relRath.startsWith(".") && relRath.startsWith("..")) return path.join(this.backupDir, relRath);
+TemplateFSHandler_proto.getCorrespondingBackupPath = function (filePath) {
+    var relRath = path.relative(this.baseDir, filePath);
+    if (!relRath.startsWith(".")) return path.join(this.backupDir, relRath);
 };
 
 TemplateFSHandler_proto.backupFileIfNeed = function (filePath) {
@@ -127,7 +131,7 @@ TemplateFSHandler_proto.recoverFile = function (filePath) {
 };
 
 // #TODO:
-TemplateFSHandler_proto.recover = function (path) {
+TemplateFSHandler_proto.recover = function (filePath) {
 
 };
 
@@ -171,6 +175,19 @@ Template_proto.patchFile = function (filePath, patcherFn) {
 
 // #TODO:
 Template_proto.patch = function (data) {
+    var mediaTypesStream = FileIOHandler.loadXMLToJsObject(path.join(
+        this.fsHandler.baseDir, "[Content_Types].xml"));
+
+    // Patch main document content
+    var mainDocumentPart = mediaTypesStream
+        .elements.find(e => e.name === 'Types')
+        .elements.filter(e => e.name === 'Override' && e.attributes.ContentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml")
+        .pop().attributes.PartName;
+
+    var mainDocumentPartPath = path.join(this.fsHandler.baseDir, '.' + mainDocumentPart)
+    this.fsHandler.backupFileIfNeed(mainDocumentPartPath);
+
+    console.log(mainDocumentPartPath);
     // #TODO:
     // this.fsHandler.backupDir( <changed-file-path> )
 };
@@ -223,7 +240,7 @@ App_proto.setTemplate = function (templatePath) {
 App_proto.setData = function (data) {
     if (typeof data === 'string' || data instanceof String) {
         this.state.dataPath = path.resolve(data);
-        data = FileIOHandler.loadToJsObject(data)
+        data = FileIOHandler.loadJSONToJsObject(data)
     }
     else this.state.dataPath = null;
 
