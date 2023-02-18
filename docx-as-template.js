@@ -184,7 +184,6 @@ function Template(rawFilePath, templateDir) {
     if (templateDir === undefined) {
         templateDir = rawFilePath + "--tmp";
         fs.mkdirSync(templateDir, { recursive: true });
-        // #TODO: uncomment below at production.
         TmpDirCleaner.add(templateDir);
     };
 
@@ -228,39 +227,48 @@ Template_proto.patch = function (data) {
 
     // Patching process
     var content = FileIOHandler.load(mainDocumentPartPath);
-    var listPlaceholder = content.match(/{[\w_]+}/g).filter((e, i, arr) => arr.indexOf(e) === i)
+    var listPlaceholder = content.match(/{[\w_]+}/g)
+    if (listPlaceholder) {
+        listPlaceholder.filter((e, i, arr) => arr.indexOf(e) === i)
 
-    listPlaceholder.filter(function (placeholder, index, array) {
-        var key = placeholder.slice(1, -1);
-        if (!data.hasOwnProperty(key)) {
-            console.warn(`Missing data for: ${key}`);
-            return true;
-        };
+        listPlaceholder.filter(function (placeholder, index, array) {
+            var key = placeholder.slice(1, -1);
+            if (!data.hasOwnProperty(key)) {
+                console.warn(`Missing data for: ${key}`);
+                return true;
+            };
 
-        var fillString = String(data[key]);
-        var reg = new RegExp(placeholder, "g");
-        content = content.replace(reg, fillString)
-
-        return false;
-    }, this);
-
-    // Scan any suspect remnant
-    var suspectPlaceholder = content.replace(/{[-\w]*}/g, '').match(/{[^}]+}/g);
-    suspectPlaceholder.filter(function (suspectString, index, array) {
-
-        var cleanedString = suspectString.replace(/<{1}[^>]*>/g, '').replace(/[\W\n]*/g, '');
-
-        if (data.hasOwnProperty(cleanedString)) {
-            var fillString = String(data[cleanedString]);
-            content = content.replace(suspectString, fillString);
+            var fillString = String(data[key]);
+            var reg = new RegExp(placeholder, "g");
+            content = content.replace(reg, fillString)
 
             return false;
-        };
+        }, this);
+    };
 
-        console.info(`Maybe missing data for: ${cleanedString}`);
+    // Scan any suspect remnant
+    var listSuspectPlaceholder = content.replace(/{[-\w]*}/g, '').match(/{[^}]+}/g);
+    if (listSuspectPlaceholder) {
+        listSuspectPlaceholder.filter(function (suspectString, index, array) {
 
-        return true;
-    }, this);
+            var cleanedString = suspectString.replace(/<{1}[^>]*>/g, '').replace(/[\W\n]*/g, '');
+    
+            if (data.hasOwnProperty(cleanedString)) {
+                var fillString = String(data[cleanedString]);
+                content = content.replace(suspectString, fillString);
+    
+                return false;
+            };
+    
+            console.info(`Maybe missing data for: ${cleanedString}`);
+    
+            return true;
+        }, this);
+    };
+
+    if ((listPlaceholder || []).length + (listSuspectPlaceholder||[]).length < 1) {
+        console.warn(`Found no placeholder in this template: ${this.rawFilePath}`);
+    };
 
     FileIOHandler.write(mainDocumentPartPath, content);
 
