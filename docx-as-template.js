@@ -77,17 +77,17 @@ const XMLHandler = {
  */
 // #TODO:
 const FileIOHandler = {
-    load: function (path) {
-        return fs.readFileSync(path, 'utf8');
+    load: function (filePath) {
+        return fs.readFileSync(filePath, 'utf8');
     },
-    loadJSONToJsObject: function (path) {
-        return JSON.parse(this.load(path))
+    loadJSONToJsObject: function (filePath) {
+        return JSON.parse(this.load(filePath))
     },
-    loadXMLToJsObject: function (path) {
-        return XMLHandler.toJsObject(this.load(path))
+    loadXMLToJsObject: function (filePath) {
+        return XMLHandler.toJsObject(this.load(filePath))
     },
-    write: function (path) {
-        fs.writeFileSync(path);
+    write: function (filePath, data) {
+        fs.writeFileSync(filePath, data);
     }
 };
 
@@ -117,11 +117,15 @@ TemplateFSHandler_proto.backupFileIfNeed = function (filePath) {
         { recursive: true }
     );
 
-    fs.copyFileSync(
-        filePath,
-        fileBackupPath,
-        fs.constants.COPYFILE_EXCL
-    );
+    try {
+        fs.copyFileSync(
+            filePath,
+            fileBackupPath,
+            fs.constants.COPYFILE_EXCL
+        );
+    } catch (error) {
+        if (error.code === 'EEXIST') return;
+    }
 
 };
 
@@ -178,18 +182,36 @@ Template_proto.patch = function (data) {
     var mediaTypesStream = FileIOHandler.loadXMLToJsObject(path.join(
         this.fsHandler.baseDir, "[Content_Types].xml"));
 
-    // Patch main document content
+    // Locate to main document content
     var mainDocumentPart = mediaTypesStream
         .elements.find(e => e.name === 'Types')
         .elements.filter(e => e.name === 'Override' && e.attributes.ContentType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml")
         .pop().attributes.PartName;
 
-    var mainDocumentPartPath = path.join(this.fsHandler.baseDir, '.' + mainDocumentPart)
+    var mainDocumentPartPath = path.join(this.fsHandler.baseDir, mainDocumentPart)
+
+    // Make a backup for refresing
     this.fsHandler.backupFileIfNeed(mainDocumentPartPath);
 
-    console.log(mainDocumentPartPath);
-    // #TODO:
-    // this.fsHandler.backupDir( <changed-file-path> )
+    // Patching process
+    var content = FileIOHandler.load(mainDocumentPartPath);
+    var listPlaceholder = content.match(/{[\w_]+}/g).filter((e, i, arr) => arr.indexOf(e) === i)
+
+    listPlaceholder.filter(function (placeholder, index, array) {
+        var key = placeholder.slice(1, -1);
+        if (!data.hasOwnProperty(key)) {
+            console.warn(`Missing ${key} in data`);
+            return true;
+        };
+
+        var fillString = String(data[key]);
+        content = content.replaceAll(placeholder, fillString)
+
+        return false;
+    }, this);
+
+    FileIOHandler.write(mainDocumentPartPath, content);
+
 };
 
 Template_proto.compile = function (outputPath) {
