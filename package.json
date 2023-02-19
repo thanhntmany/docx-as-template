@@ -4,7 +4,8 @@
   "description": "Use docx as a template to rendering data",
   "main": "index.js",
   "scripts": {
-    "test": "cd ./test/test1/ && node index.js"
+    "test1": "cd ./test/test1/ && node index.js",
+    "test2": "cd ./test/test2/ && node index.js"
   },
   "repository": {
     "type": "git",
