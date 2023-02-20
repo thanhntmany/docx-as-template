@@ -6,6 +6,10 @@ Instructions:
 
 ## Use as a js library
 ```js
+'use strict';
+const DocxAsTemplate = require('docx-as-template');
+
+
 // Short instruction:
 app.setTemplate("path/to/template.docx");
 app.setData("JsObject or path/to/data.json");
