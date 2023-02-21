@@ -351,6 +351,8 @@ exports = module.exports = createApp;
 exports.App = App;
 exports.Template = Template;
 exports.TemplateStore = TemplateStore;
+exports.ZIPHandler = ZIPHandler;
+
 
 /**
  * Run module as an independent application.
