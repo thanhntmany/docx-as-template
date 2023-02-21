@@ -2,7 +2,7 @@
   "name": "docx-as-template",
   "version": "1.0.0",
   "description": "Use docx as a template to rendering data",
-  "main": "index.js",
+  "main": "docx-as-template.js",
   "scripts": {
     "test1": "cd ./test/test1/ && node index.js",
     "test2": "cd ./test/test2/ && node index.js"
@@ -20,5 +20,6 @@
   "dependencies": {
     "adm-zip": "^0.5.10",
     "xml-js": "^1.6.11"
-  }
+  },
+  "devDependencies": {}
 }
