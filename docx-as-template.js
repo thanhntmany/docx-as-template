@@ -1,8 +1,3 @@
-/*!
- * docx-as-template.js
- * Copyright(c) 2023 Thanhntmany
- */
-
 'use strict';
 
 // const process = require('process');
