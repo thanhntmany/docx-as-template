@@ -9,6 +9,7 @@ Instructions:
 'use strict';
 const DocxAsTemplate = require('docx-as-template');
 
+const app = DocxAsTemplate();
 
 // Short instruction:
 app.setTemplate("path/to/template.docx");

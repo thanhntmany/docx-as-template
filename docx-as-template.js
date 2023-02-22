@@ -106,6 +106,7 @@ function TemplateFSHandler(baseDir, backupDir) {
     this.baseDir = baseDir;
     this.backupDir = backupDir;
 
+    fs.rmdirSync(this.backupDir, { recursive: true, force: true });
     fs.mkdirSync(this.baseDir, { recursive: true });
     fs.mkdirSync(this.backupDir, { recursive: true });
 };
@@ -247,21 +248,21 @@ Template_proto.patch = function (data) {
         listSuspectPlaceholder.filter(function (suspectString, index, array) {
 
             var cleanedString = suspectString.replace(/<{1}[^>]*>/g, '').replace(/[\W\n]*/g, '');
-    
+
             if (data.hasOwnProperty(cleanedString)) {
                 var fillString = String(data[cleanedString]);
                 content = content.replace(suspectString, fillString);
-    
+
                 return false;
             };
-    
+
             console.info(`Maybe missing data for: ${cleanedString}`);
-    
+
             return true;
         }, this);
     };
 
-    if ((listPlaceholder || []).length + (listSuspectPlaceholder||[]).length < 1) {
+    if ((listPlaceholder || []).length + (listSuspectPlaceholder || []).length < 1) {
         console.warn(`Found no placeholder in this template: ${this.rawFilePath}`);
     };
 
