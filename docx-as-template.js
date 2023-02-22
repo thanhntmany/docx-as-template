@@ -221,16 +221,19 @@ Template_proto.patch = function (data) {
     // Make a backup for refresing
     this.fsHandler.backupFileIfNeed(mainDocumentPartPath);
 
+    // List missing placeholder
+    var missingPlaceholders = [];
+
     // Patching process
     var content = FileIOHandler.load(mainDocumentPartPath);
     var listPlaceholder = content.match(/{[\w_]+}/g)
     if (listPlaceholder) {
-        listPlaceholder.filter((e, i, arr) => arr.indexOf(e) === i)
+        listPlaceholder = listPlaceholder.filter((e, i, arr) => arr.indexOf(e) === i)
 
         listPlaceholder.filter(function (placeholder, index, array) {
             var key = placeholder.slice(1, -1);
             if (!data.hasOwnProperty(key)) {
-                console.warn(`Missing data for: ${key}`);
+                missingPlaceholders.push(key);
                 return true;
             };
 
@@ -256,7 +259,7 @@ Template_proto.patch = function (data) {
                 return false;
             };
 
-            console.info(`Maybe missing data for: ${cleanedString}`);
+            missingPlaceholders.push(cleanedString);
 
             return true;
         }, this);
@@ -264,6 +267,12 @@ Template_proto.patch = function (data) {
 
     if ((listPlaceholder || []).length + (listSuspectPlaceholder || []).length < 1) {
         console.warn(`Found no placeholder in this template: ${this.rawFilePath}`);
+    };
+
+    missingPlaceholders = missingPlaceholders.filter((e, i, arr) => arr.indexOf(e) === i).sort();
+    if (missingPlaceholders.length > 0) {
+        console.warn(`Warn in processing template:\n${this.rawFilePath}\nMaybe missing data for below placeholder(s):`);
+        missingPlaceholders.forEach(p => console.log(` - ${p}`));
     };
 
     FileIOHandler.write(mainDocumentPartPath, content);
