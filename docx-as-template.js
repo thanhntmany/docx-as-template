@@ -6,6 +6,7 @@ const path = require('path');
 const AdmZip = require("adm-zip");
 const XmlJs = require('xml-js');
 
+
 /**
  * Temporary files Cleaner
  */
@@ -25,7 +26,7 @@ TmpDirCleaner.clean = function () {
         recursive: true,
     };
     while ((curPath = this.queue.shift()) !== undefined) {
-        fs.rmdirSync(curPath, rm_options);
+        fs.rmSync(curPath, rm_options);
     };
 };
 
@@ -105,7 +106,6 @@ function treeDir(dirPath) {
 function TemplateFSHandler(baseDir, backupDir) {
     this.baseDir = baseDir;
     this.backupDir = backupDir;
-
     fs.rmdirSync(this.backupDir, { recursive: true, force: true });
     fs.mkdirSync(this.baseDir, { recursive: true });
     fs.mkdirSync(this.backupDir, { recursive: true });
@@ -179,13 +179,10 @@ function Template(rawFilePath, templateDir) {
     rawFilePath = path.resolve(rawFilePath);
     if (templateDir === undefined) {
         templateDir = rawFilePath + "--tmp";
-        fs.mkdirSync(templateDir, { recursive: true });
-        TmpDirCleaner.add(templateDir);
     };
 
     this.rawFilePath = rawFilePath;
-    this.templateDir = templateDir;
-
+    this.setWorkingDir(templateDir);
     this.fsHandler = new TemplateFSHandler(
         path.join(this.templateDir, "base"),
         path.join(this.templateDir, "backup"),
@@ -197,6 +194,13 @@ function Template(rawFilePath, templateDir) {
     ZIPHandler.unzip(zipFormPath, this.fsHandler.baseDir);
 };
 const Template_proto = Template.prototype;
+
+Template_proto.setWorkingDir = function (templateDir) {
+    fs.mkdirSync(templateDir, { recursive: true });
+    TmpDirCleaner.add(templateDir);
+    this.templateDir = templateDir;
+    return this;
+};
 
 Template_proto.refresh = function () {
     this.fsHandler.recover();
@@ -294,15 +298,20 @@ Template_proto.render = function (outputPath, data) {
  */
 const TemplateStore = {
     _cache: {},
-    _loadTemplate: function (templatePath) {
-        return new Template(templatePath);
+    _loadTemplate: function (templatePath, templateDir) {
+        return new Template(templatePath, templateDir);
     },
-    getTemplate: function (templatePath) {
+    getTemplate: function (templatePath, templateDir) {
         templatePath = path.resolve(templatePath);
+        if (templateDir) templateDir = path.resolve(templateDir);
 
-        return templatePath in this._cache
+        var templateObj = templatePath in this._cache
             ? this._cache[templatePath]
-            : this._cache[templatePath] = this._loadTemplate(templatePath)
+            : this._cache[templatePath] = this._loadTemplate(templatePath, templateDir)
+
+        if (templateDir) templateObj.setWorkingDir(templateDir);
+
+        return templateObj;
     }
 };
 
@@ -319,8 +328,9 @@ function App() {
 };
 const App_proto = App.prototype;
 
-App_proto.setTemplate = function (templatePath) {
+App_proto.setTemplate = function (templatePath, templateDir) {
     this.state.templatePath = templatePath;
+    this.state.templateDir = templateDir;
     return this;
 };
 
@@ -335,8 +345,8 @@ App_proto.setData = function (data) {
     return this;
 };
 
-App_proto.render = function (outputPath, data, templatePath) {
-    if (templatePath) this.setTemplate(templatePath);
+App_proto.render = function (outputPath, data, templatePath, templateDir) {
+    if (templatePath) this.setTemplate(templatePath, templateDir);
     if (data) this.setData(data);
 
     if (!outputPath) outputPath = path.join(
@@ -345,7 +355,7 @@ App_proto.render = function (outputPath, data, templatePath) {
     );
 
     return TemplateStore
-        .getTemplate(this.state.templatePath)
+        .getTemplate(this.state.templatePath, this.state.templateDir)
         .render(outputPath, this.state.data);
 };
 
